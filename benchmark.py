@@ -1,8 +1,9 @@
 import pandas as pd
 import numpy as np
+import argparse
 from sklearn.metrics import roc_auc_score, roc_curve, accuracy_score, precision_score, recall_score, f1_score
 
-def evaluate_predictions(ground_truth_csv, predictions_csv):
+def evaluate_predictions(args):
     """
     Merges ground truth and prediction files, calculates classification metrics
     for target diseases, and prints the results in a formatted table.
@@ -16,8 +17,8 @@ def evaluate_predictions(ground_truth_csv, predictions_csv):
 
     # --- 1. Load and Merge Data ---
     try:
-        ground_truth_df = pd.read_csv(ground_truth_csv)
-        predictions_df = pd.read_csv(predictions_csv)
+        ground_truth_df = pd.read_csv(args.truth_file)
+        predictions_df = pd.read_csv(args.result_file)
     except FileNotFoundError as e:
         print(f"Error: {e}. Please ensure both CSV files are in the correct directory.")
         return
@@ -84,8 +85,22 @@ def evaluate_predictions(ground_truth_csv, predictions_csv):
     print("="*80)
 
 if __name__ == "__main__":
-    # Use the filenames you've specified
-    GROUND_TRUTH_FILE = 'sampled_subset_metadata.csv'
-    PREDICTIONS_FILE = 'inference_results.csv'
+    parser = argparse.ArgumentParser(
+        description="Create a rigorous, curated, and stratified train/test split from the NIH Chest X-ray dataset."
+    )
+    parser.add_argument(
+        "--truth_file",
+        type=str,
+        required=True,
+        help="Path to the ground truth csv file"
+    )
+    parser.add_argument(
+        "--result_file",
+        type = str,
+        required=True,
+        help="Path to the inference results csv file"
+    )
 
-    evaluate_predictions(GROUND_TRUTH_FILE, PREDICTIONS_FILE)
+    args = parser.parse_args()
+    print(args)
+    evaluate_predictions(args)

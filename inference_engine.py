@@ -5,60 +5,24 @@ import torch
 import torchxrayvision as xrv
 import torchvision
 import skimage.io
-from torch.utils.data import Dataset, DataLoader
 from tqdm import tqdm
 
-class ChestXRayInferenceDataset(Dataset):
-    """Dataset for loading chest X-ray images for inference."""
-    def __init__(self, df, image_dir, transform=None):
-        self.df = df
-        self.image_dir = image_dir
-        self.transform = transform
-
-    def __len__(self):
-        return len(self.df)
-
-    def __getitem__(self, idx):
-        row = self.df.iloc[idx]
-        image_filename = row["Image Index"]
-        img_path = os.path.join(self.image_dir, image_filename)
-
-        try:
-            img = skimage.io.imread(img_path)
-            img = xrv.datasets.normalize(img, 255)
-            img = img[None, :, :]  # Add channel dimension
-
-            if self.transform:
-                img = self.transform(img)
-
-            img_tensor = torch.from_numpy(img)
-            return image_filename, img_tensor
-        except Exception as e:
-            print(f"Error loading image {image_filename}: {e}")
-            return None, None
-
-def collate_fn(batch):
-    """Custom collate function to filter out None values from failed image loads."""
-    batch = list(filter(lambda x: x[0] is not None, batch))
-    if not batch:
-        return None, None
-    return torch.utils.data.dataloader.default_collate(batch)
-
-def run_benchmark(args):
+def run_inference(args):
     """
-    Main function to run the inference benchmark.
+    Loads a model and a test set, runs inference on each image one-by-one,
+    and saves the raw prediction scores to a CSV file.
     """
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"Using device: {DEVICE}")
 
-    # --- Load Model ---
+    # --- 1. Load Model ---
     print(f"Loading model: {args.model_weights}")
     model = xrv.models.DenseNet(weights=args.model_weights)
     model = model.to(DEVICE)
     model.eval()
     disease_labels = model.pathologies
 
-    # --- Setup Data ---
+    # --- 2. Setup Data and Transforms ---
     print(f"Loading test set from: {args.test_csv}")
     df = pd.read_csv(args.test_csv)
     
@@ -67,33 +31,38 @@ def run_benchmark(args):
         xrv.datasets.XRayResizer(224),
     ])
 
-    dataset = ChestXRayInferenceDataset(df, args.image_dir, transform=transform)
-    dataloader = DataLoader(
-        dataset,
-        batch_size=args.batch_size,
-        shuffle=False,
-        num_workers=args.num_workers,
-        pin_memory=True,
-        collate_fn=collate_fn # Use custom collate function
-    )
-
-    # --- Run Inference ---
-    print(f"Starting inference on {len(dataset)} images...")
+    # --- 3. Run Inference (Row-by-Row) ---
+    print(f"Starting inference on {len(df)} images...")
     results = []
     with torch.no_grad():
-        for filenames, image_batch in tqdm(dataloader):
-            if filenames is None: continue # Skip empty batches
-            
-            image_batch = image_batch.to(DEVICE)
-            preds = model(image_batch)
-            preds_np = preds.cpu().numpy()
+        for _, row in tqdm(df.iterrows(), total=len(df)):
+            image_filename = row["Image Index"]
+            img_path = os.path.join(args.image_dir, image_filename)
 
-            for i, filename in enumerate(filenames):
-                pred_dict = {"image_filename": filename}
-                pred_dict.update({disease_labels[j]: preds_np[i, j] for j in range(len(disease_labels))})
+            try:
+                # Load and preprocess the image
+                img = skimage.io.imread(img_path)
+                img = xrv.datasets.normalize(img, 255)
+                img = img[None, :, :]  # Add channel dimension
+                img = transform(img)
+                img_tensor = torch.from_numpy(img)
+                
+                # Add batch dimension of 1 and move to device
+                img_tensor = img_tensor.unsqueeze(0).to(DEVICE)
+
+                # Run inference
+                preds = model(img_tensor)
+                preds_np = preds.cpu().numpy().flatten()
+
+                # Store results
+                pred_dict = {"image_filename": image_filename}
+                pred_dict.update({disease_labels[j]: preds_np[j] for j in range(len(disease_labels))})
                 results.append(pred_dict)
+            
+            except Exception as e:
+                print(f"Could not process image {image_filename}: {e}")
 
-    # --- Save Results ---
+    # --- 4. Save Results ---
     results_df = pd.DataFrame(results)
     results_df.to_csv(args.output_csv, index=False)
     print(f"\n--- ✅ Inference complete! ---")
@@ -101,13 +70,7 @@ def run_benchmark(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Run inference on a chest X-ray dataset using a torchxrayvision model."
-    )
-    parser.add_argument(
-        "--output_csv",
-        type=str,
-        required=True,
-        help="Path to save the output CSV file with model predictions."
+        description="Run inference on a chest X-ray test set and save the raw predictions."
     )
     parser.add_argument(
         "--model_weights",
@@ -119,26 +82,20 @@ if __name__ == "__main__":
         "--test_csv",
         type=str,
         required=True,
-        help="Path to the test set CSV file containing image filenames."
+        help="Path to the curated test set CSV file."
     )
     parser.add_argument(
         "--image_dir",
         type=str,
         required=True,
-        help="Path to the directory containing the test images."
+        help="Path to the directory containing all the test images."
     )
     parser.add_argument(
-        "--batch_size",
-        type=int,
-        default=32,
-        help="Number of images to process in each batch."
-    )
-    parser.add_argument(
-        "--num_workers",
-        type=int,
-        default=4,
-        help="Number of worker processes for parallel data loading."
+        "--output_csv",
+        type=str,
+        required=True,
+        help="Path for the output CSV file where predictions will be saved."
     )
 
     args = parser.parse_args()
-    run_benchmark(args)
+    run_inference(args)

@@ -1,0 +1,49 @@
+--- Job Started on x1000c0s7b0n1 at Fri Sep 19 10:49:35 +08 2025 ---
+Current directory: /home/users/ntu/mall0006/scratch
+Purging and loading modules...
+Running smoke test training script...
+Using device: cuda
+Loading datasets for SMOKE TEST...
+--- SMOKE TEST: Using a limited dataset of 800 samples ---
+--- SMOKE TEST: Using a limited dataset of 800 samples ---
+Initializing model...
+
+--- Epoch 1/1 (Smoke Test) ---
+Training Epoch 1:   0%|          | 0/25 [00:00<?, ?it/s]Training Epoch 1:   0%|          | 0/25 [00:17<?, ?it/s, loss=0.705]Training Epoch 1:   4%|▍         | 1/25 [00:17<06:59, 17.47s/it, loss=0.705]Training Epoch 1:   4%|▍         | 1/25 [00:17<06:59, 17.47s/it, loss=0.688]Training Epoch 1:   4%|▍         | 1/25 [00:17<06:59, 17.47s/it, loss=0.679]Training Epoch 1:   4%|▍         | 1/25 [00:17<06:59, 17.47s/it, loss=0.674]Training Epoch 1:  16%|█▌        | 4/25 [00:17<01:10,  3.34s/it, loss=0.674]Training Epoch 1:  16%|█▌        | 4/25 [00:17<01:10,  3.34s/it, loss=0.698]Training Epoch 1:  16%|█▌        | 4/25 [00:17<01:10,  3.34s/it, loss=0.734]Training Epoch 1:  16%|█▌        | 4/25 [00:17<01:10,  3.34s/it, loss=0.686]Training Epoch 1:  28%|██▊       | 7/25 [00:17<00:28,  1.57s/it, loss=0.686]Training Epoch 1:  28%|██▊       | 7/25 [00:17<00:28,  1.57s/it, loss=0.667]Training Epoch 1:  28%|██▊       | 7/25 [00:18<00:28,  1.57s/it, loss=0.649]Training Epoch 1:  28%|██▊       | 7/25 [00:22<00:28,  1.57s/it, loss=0.721]Training Epoch 1:  40%|████      | 10/25 [00:22<00:23,  1.59s/it, loss=0.721]Training Epoch 1:  40%|████      | 10/25 [00:24<00:23,  1.59s/it, loss=0.564]Training Epoch 1:  40%|████      | 10/25 [00:29<00:23,  1.59s/it, loss=0.662]Training Epoch 1:  48%|████▊     | 12/25 [00:29<00:27,  2.14s/it, loss=0.662]Training Epoch 1:  48%|████▊     | 12/25 [00:29<00:27,  2.14s/it, loss=0.751]Training Epoch 1:  48%|████▊     | 12/25 [00:29<00:27,  2.14s/it, loss=0.66] Training Epoch 1:  56%|█████▌    | 14/25 [00:29<00:17,  1.58s/it, loss=0.66]Training Epoch 1:  56%|█████▌    | 14/25 [00:31<00:17,  1.58s/it, loss=0.668]Training Epoch 1:  60%|██████    | 15/25 [00:31<00:16,  1.61s/it, loss=0.668]Training Epoch 1:  60%|██████    | 15/25 [00:35<00:16,  1.61s/it, loss=0.579]Training Epoch 1:  64%|██████▍   | 16/25 [00:35<00:18,  2.02s/it, loss=0.579]Training Epoch 1:  64%|██████▍   | 16/25 [00:35<00:18,  2.02s/it, loss=0.593]Training Epoch 1:  64%|██████▍   | 16/25 [00:35<00:18,  2.02s/it, loss=0.675]Training Epoch 1:  72%|███████▏  | 18/25 [00:35<00:09,  1.32s/it, loss=0.675]Training Epoch 1:  72%|███████▏  | 18/25 [00:38<00:09,  1.32s/it, loss=0.724]Training Epoch 1:  76%|███████▌  | 19/25 [00:38<00:09,  1.57s/it, loss=0.724]Training Epoch 1:  76%|███████▌  | 19/25 [00:43<00:09,  1.57s/it, loss=0.734]Training Epoch 1:  80%|████████  | 20/25 [00:43<00:11,  2.39s/it, loss=0.734]Training Epoch 1:  80%|████████  | 20/25 [00:43<00:11,  2.39s/it, loss=0.656]Training Epoch 1:  80%|████████  | 20/25 [00:49<00:12,  2.50s/it, loss=0.656]
+--- SMOKE TEST: Stopping training epoch after 21 batches ---
+Validating Epoch 1:   0%|          | 0/25 [00:00<?, ?it/s]Validating Epoch 1:   4%|▍         | 1/25 [00:06<02:41,  6.74s/it]Validating Epoch 1:  12%|█▏        | 3/25 [00:07<00:43,  1.97s/it]Validating Epoch 1:  20%|██        | 5/25 [00:13<00:51,  2.57s/it]Validating Epoch 1:  28%|██▊       | 7/25 [00:15<00:33,  1.87s/it]Validating Epoch 1:  36%|███▌      | 9/25 [00:21<00:37,  2.34s/it]Validating Epoch 1:  52%|█████▏    | 13/25 [00:28<00:24,  2.01s/it]Validating Epoch 1:  68%|██████▊   | 17/25 [00:35<00:15,  1.93s/it]Validating Epoch 1:  80%|████████  | 20/25 [00:48<00:12,  2.40s/it]
+--- SMOKE TEST: Stopping validation after 21 batches ---
+Epoch 1 Validation AUC (on subset): 0.6552
+🎉 Smoke test model saved to dataset/triage_model_smoke_test.pth
+
+--- ✅ Smoke test complete! ---
+--- Job Finished at Fri Sep 19 10:55:48 +08 2025 ---
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+			Resource Usage on 2025-09-19 10:55:49.638995:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	JobId: 11823237.pbs101
+	Project: personal-mall0006
+	Exit Status: 0
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	NCPUs: Requested(16), Used(16)
+	CPU Time Used: 00:00:40
+	Memory: Requested(110gb), Used(2111920kb)
+	Vmem Used: 82979708kb
+	Walltime: Requested(00:10:00), Used(00:06:14)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	Execution Nodes Used: (x1000c0s7b0n1:ncpus=16:ngpus=1:mem=115343360kb)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	GPU Duration: 6.25mins
+	GPU Power Consumed: 54.66W
+	GPU Max GPU Memory Used: 3.94GB
+	Memory Throughput Rate (Average): x1000c0s7b0n1:(gpu2:0%)
+	Memory Throughput Rate (Max): x1000c0s7b0n1:(gpu2:0%)
+	Memory Throughput Rate (Min): x1000c0s7b0n1:(gpu2:0%)
+	GPU SM Utilization (Average): x1000c0s7b0n1:(gpu2:0%)
+	GPU SM Utilization (Max): x1000c0s7b0n1:(gpu2:0%)
+	GPU SM Utilization (Min): x1000c0s7b0n1:(gpu2:0%)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Warning: All GPUs have a percentage of 0 utilisation.
+GPU application profile: Idle
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+

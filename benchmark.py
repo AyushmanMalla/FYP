@@ -2,62 +2,66 @@ import pandas as pd
 import numpy as np
 import argparse
 from sklearn.metrics import roc_auc_score, roc_curve, accuracy_score, precision_score, recall_score, f1_score
+import os
 
 def evaluate_predictions(args):
     """
-    Merges ground truth and prediction files, calculates classification metrics
-    for target diseases, and prints the results in a formatted table.
-
-    Args:
-        ground_truth_csv (str): Path to the CSV with ground truth labels.
-        predictions_csv (str): Path to the CSV with model prediction scores.
+    Dynamically finds common pathologies between ground truth and prediction files,
+    calculates classification metrics, and prints the results.
     """
-    # These are the 5 diseases with binary labels in your sampled_subset.csv
-    target_diseases = ["Pneumonia", "Effusion", "Cardiomegaly", "Infiltration", "Atelectasis"]
-
-    # --- 1. Load and Merge Data ---
+    # --- 1. Load Data ---
     try:
         ground_truth_df = pd.read_csv(args.truth_file)
         predictions_df = pd.read_csv(args.result_file)
+        print("✅ Data files loaded successfully.")
     except FileNotFoundError as e:
-        print(f"Error: {e}. Please ensure both CSV files are in the correct directory.")
+        print(f"❌ ERROR: {e}. Please ensure both CSV files are at the correct path.")
         return
 
-    # This is the key step: Merge the two dataframes.
-    # We use suffixes to distinguish between ground truth (_true) and prediction (_pred) columns
-    # because both files share column names like "Atelectasis".
+    # ## MODIFICATION: Dynamically find the diseases to evaluate ##
+    # Find the intersection of columns, excluding the image identifier columns.
+    gt_cols = set(ground_truth_df.columns) - {'Image Index', 'Patient ID', 'Finding Labels', 'View Position'}
+    pred_cols = set(predictions_df.columns) - {'image_filename'}
+    
+    target_diseases = sorted(list(gt_cols.intersection(pred_cols)))
+    
+    if not target_diseases:
+        print("❌ ERROR: No common pathology columns found between the two files. Please check your CSVs.")
+        return
+        
+    print(f"Found {len(target_diseases)} common pathologies to evaluate: {target_diseases}")
+
+    # --- 2. Merge Data ---
+    # Merge based on the respective image identifier columns.
     merged_df = pd.merge(
         ground_truth_df,
         predictions_df,
         left_on='Image Index',
-        right_on='image_filename',
-        suffixes=('_true', '_pred')
+        right_on='image_filename'
+        # Note: We don't need suffixes if column names are now unique (except for identifiers)
+        # But we will add them just in case of other overlapping columns.
     )
 
-    # --- 2. Calculate Metrics for Each Disease ---
+    # --- 3. Calculate Metrics for Each Disease ---
     results = []
     for disease in target_diseases:
-        true_col = f"{disease}_true"
-        pred_col = f"{disease}_pred"
-        
-        # Check if the disease exists in both dataframes
-        if true_col not in merged_df.columns or pred_col not in merged_df.columns:
-            print(f"Warning: Columns for '{disease}' not found. It might not be in both CSVs. Skipping.")
-            continue
+        # For this logic, we assume the ground truth columns are named 'Disease'
+        # and prediction columns are also named 'Disease'.
+        # If your prediction file from torchxrayvision has different names, adjust here.
+        y_true = merged_df[f"{disease}_x"] # Pandas appends _x for left df
+        y_scores = merged_df[f"{disease}_y"] # Pandas appends _y for right df
 
-        y_true = merged_df[true_col]
-        y_scores = merged_df[pred_col]
-
-        # Calculate AUC-ROC and find the best threshold
+        # Calculate AUC-ROC and find the best threshold for F1-score etc.
         auc_score = roc_auc_score(y_true, y_scores)
         fpr, tpr, thresholds = roc_curve(y_true, y_scores)
-        optimal_idx = np.argmax(tpr - fpr) # Youden's J statistic
+        
+        # Find the optimal threshold that maximizes Youden's J statistic
+        optimal_idx = np.argmax(tpr - fpr)
         optimal_threshold = thresholds[optimal_idx]
 
-        # Apply threshold to get binary predictions
         y_pred_binary = (y_scores >= optimal_threshold).astype(int)
 
-        # Calculate metrics
+        # Calculate other metrics at this optimal threshold
         accuracy = accuracy_score(y_true, y_pred_binary)
         precision = precision_score(y_true, y_pred_binary, zero_division=0)
         recall = recall_score(y_true, y_pred_binary, zero_division=0)
@@ -73,34 +77,25 @@ def evaluate_predictions(args):
             "F1-Score": f1
         })
 
-    # --- 3. Display Results in a Clean Table ---
+    # --- 4. Display Results ---
     if not results:
-        print("No results to display. Please check your CSV files and column names.")
+        print("No results to display.")
         return
         
     results_df = pd.DataFrame(results)
-    print("🩺 Model Performance Evaluation (densenet121-res224-all):")
-    print("="*80)
-    print(results_df.to_string(index=False, float_format="{:.4f}".format))
-    print("="*80)
+    mean_auc = results_df['AUC-ROC'].mean()
+
+    print(results_df)    
+    print(f"\n🩺 Model Performance Evaluation: {os.path.basename(args.result_file)}")
+    print("="*90)
+    print(results_df.to_string(index=False, float_format="{:.4f}"))
+    print("-" * 90)
+    print(f"Mean AUC-ROC across {len(results_df)} pathologies: {mean_auc:.4f}")
+    print("="*90)
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Create a rigorous, curated, and stratified train/test split from the NIH Chest X-ray dataset."
-    )
-    parser.add_argument(
-        "--truth_file",
-        type=str,
-        required=True,
-        help="Path to the ground truth csv file"
-    )
-    parser.add_argument(
-        "--result_file",
-        type = str,
-        required=True,
-        help="Path to the inference results csv file"
-    )
-
+    parser = argparse.ArgumentParser(description="Evaluate model predictions against ground truth.")
+    parser.add_argument("--truth_file", type=str, required=True, help="Path to the ground truth CSV file.")
+    parser.add_argument("--result_file", type=str, required=True, help="Path to the inference results CSV file.")
     args = parser.parse_args()
-    print(args)
     evaluate_predictions(args)

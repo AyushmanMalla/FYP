@@ -56,7 +56,7 @@ def train(args):
     # --- Configuration for Optimized Run ---
     CONFIG = {
         "train_csv": os.path.join(args.base_dir, "consensus_train_set.csv"),
-        "test_csv": os.path.join(args.base_dir, "consensus_test_set.csv"),
+        "val_csv": os.path.join(args.base_dir, "consensus_val_set.csv"),
         "model_save_path": os.path.join(args.base_dir, "dynamic_consensus_model.pth"),
         "learning_rate": 3e-4, # A good starting LR for MLPs
         "batch_size": 256,     # Large batch size for GPU utilization
@@ -69,14 +69,14 @@ def train(args):
 
     # --- Optimized DataLoader Setup ---
     train_dataset = ConsensusDataset(CONFIG["train_csv"])
-    test_dataset = ConsensusDataset(CONFIG["test_csv"])
+    val_dataset = ConsensusDataset(CONFIG["val_csv"])
     
     train_loader = DataLoader(
         train_dataset, batch_size=CONFIG["batch_size"], shuffle=True,
         num_workers=CONFIG["num_workers"], pin_memory=True # Key optimization
     )
-    test_loader = DataLoader(
-        test_dataset, batch_size=CONFIG["batch_size"], shuffle=False,
+    val_loader = DataLoader(
+        val_dataset, batch_size=CONFIG["batch_size"], shuffle=False,
         num_workers=CONFIG["num_workers"], pin_memory=True # Key optimization
     )
 
@@ -116,7 +116,7 @@ def train(args):
         model.eval()
         all_labels, all_preds = [], []
         with torch.no_grad():
-            for features, labels in tqdm(test_loader, desc=f"Validating Epoch {epoch+1}"):
+            for features, labels in tqdm(val_loader, desc=f"Validating Epoch {epoch+1}"):
                 features, labels = features.to(device), labels.to(device)
                 outputs = model(features)
                 preds = torch.sigmoid(outputs)

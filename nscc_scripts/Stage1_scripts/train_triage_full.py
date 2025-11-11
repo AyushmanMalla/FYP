@@ -19,7 +19,7 @@ SCRATCH_BASE_PATH = "dataset/" # ⚠️ UPDATE THIS
 
 CONFIG = {
     "train_csv": os.path.join(SCRATCH_BASE_PATH, "triage_train_set.csv"),
-    "test_csv": os.path.join(SCRATCH_BASE_PATH, "triage_test_set.csv"),
+    "val_csv": os.path.join(SCRATCH_BASE_PATH, "triage_val_set.csv"),
     "image_dir": os.path.join(SCRATCH_BASE_PATH, "CXR_ALL_FLAT"),
     "model_save_path": os.path.join(SCRATCH_BASE_PATH, "triage_model_best.pth"),
     "learning_rate": 1e-4,
@@ -70,19 +70,19 @@ def main():
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         ]),
-        'test': transforms.Compose([
+        'val': transforms.Compose([
             transforms.Resize((224, 224)),
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         ]),
     }
 
-    print("Loading full datasets...")
+    print("Loading datasets...")
     train_dataset = TriageDataset(CONFIG["train_csv"], CONFIG["image_dir"], transform=data_transforms['train'])
-    test_dataset = TriageDataset(CONFIG["test_csv"], CONFIG["image_dir"], transform=data_transforms['test'])
+    val_dataset = TriageDataset(CONFIG["val_csv"], CONFIG["image_dir"], transform=data_transforms['val'])
     
     train_loader = DataLoader(train_dataset, batch_size=CONFIG["batch_size"], shuffle=True, num_workers=CONFIG["num_workers"])
-    test_loader = DataLoader(test_dataset, batch_size=CONFIG["batch_size"], shuffle=False, num_workers=CONFIG["num_workers"])
+    val_loader = DataLoader(val_dataset, batch_size=CONFIG["batch_size"], shuffle=False, num_workers=CONFIG["num_workers"])
     
     print("Initializing model...")
     model = get_triage_model().to(device)
@@ -116,7 +116,7 @@ def main():
         model.eval()
         all_labels, all_preds = [], []
         with torch.no_grad():
-            for inputs, labels in tqdm(test_loader, desc=f"Validating Epoch {epoch+1}"):
+            for inputs, labels in tqdm(val_loader, desc=f"Validating Epoch {epoch+1}"):
                 inputs, labels = inputs.to(device), labels.to(device)
                 outputs = model(inputs)
                 preds = torch.sigmoid(outputs)

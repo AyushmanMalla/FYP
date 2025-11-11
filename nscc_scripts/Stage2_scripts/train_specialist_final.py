@@ -1,9 +1,7 @@
-# File: train_specialist_preprocessed.py
-
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.utils.data import Dataset, DataLoader, WeightedRandomSampler
+from torch.utils.data import Dataset, DataLoader
 import torchvision.models as models
 import torchvision.transforms as transforms
 
@@ -49,7 +47,7 @@ class GammaCorrection:
 
 def get_pathology_transforms(pathology):
     """Returns a deterministic, pathology-specific transform pipeline."""
-    if pathology in ['pneumonia', 'atelectasis']:
+    if pathology in ['Pneumonia', 'Atelectasis']:
         # For these, we increase contrast and slightly increase brightness (gamma < 1.0)
         return transforms.Compose([
             ApplyCLAHE(clip_limit=3.0),
@@ -58,7 +56,7 @@ def get_pathology_transforms(pathology):
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         ])
-    elif pathology == 'infiltration':
+    elif pathology == 'Infiltration':
         # For this, we increase contrast and slightly decrease brightness (gamma > 1.0)
         return transforms.Compose([
             ApplyCLAHE(clip_limit=3.0),
@@ -67,7 +65,7 @@ def get_pathology_transforms(pathology):
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         ])
-    elif pathology in ['cardiomegaly', 'effusion']:
+    elif pathology in ['Cardiomegaly', 'Effusion']:
         # For shape-based pathologies, we do no enhancement
         return transforms.Compose([
             transforms.Resize((224, 224)),
@@ -77,11 +75,12 @@ def get_pathology_transforms(pathology):
     else:
         raise ValueError(f"Unknown pathology for transform selection: {pathology}")
 
-# --- (The SpecialistDataset and get_specialist_model functions remain the same) ---
+# --- 3. Dataset Class ---
 class SpecialistDataset(Dataset):
-    def __init__(self, csv_file, image_dir, transform=None):
+    def __init__(self, csv_file, image_dir, pathology, transform=None):
         self.metadata = pd.read_csv(csv_file)
         self.image_dir = image_dir
+        self.pathology = pathology
         self.transform = transform
 
     def __len__(self):
@@ -91,12 +90,13 @@ class SpecialistDataset(Dataset):
         img_name = self.metadata.loc[idx, 'Image Index']
         img_path = os.path.join(self.image_dir, img_name)
         image = Image.open(img_path).convert('RGB')
-        label = self.metadata.loc[idx, 'label']
+        label = self.metadata.loc[idx, self.pathology]
         if self.transform:
             image = self.transform(image)
         label_tensor = torch.tensor(label, dtype=torch.float32)
         return image, label_tensor.unsqueeze(0)
 
+# --- 4. Model Definition ---
 def get_specialist_model(architecture_name='resnet50'):
     """Loads the specified pre-trained architecture and adapts it for binary classification."""
     print(f"Loading {architecture_name} model...")
@@ -120,18 +120,18 @@ def get_specialist_model(architecture_name='resnet50'):
         param.requires_grad = True
     return model
 
-# --- 3. Main Training Logic ---
+# --- 5. Main Training Logic ---
 def train(args):
     # --- Configuration ---
     SCRATCH_BASE_PATH = args.base_dir
     CONFIG = {
-        "train_csv": os.path.join(SCRATCH_BASE_PATH, "specialist_datasets", f"{args.pathology}_specialist_train.csv"),
-        "test_csv": os.path.join(SCRATCH_BASE_PATH, "specialist_datasets", f"{args.pathology}_specialist_test.csv"),
+        "train_csv": os.path.join(SCRATCH_BASE_PATH, "specialist_train_set.csv"),
+        "val_csv": os.path.join(SCRATCH_BASE_PATH, "specialist_val_set.csv"),
         "image_dir": os.path.join(SCRATCH_BASE_PATH, "CXR_ALL_FLAT"),
         "model_save_path": os.path.join(SCRATCH_BASE_PATH, f"specialist_{args.pathology}_{args.architecture}_preprocessed.pth"),
-        "learning_rate": 1e-4, # Reverted to best performing LR
+        "learning_rate": 1e-4,
         "batch_size": 64,
-        "num_epochs": 20, # Reduced epochs
+        "num_epochs": 20,
         "num_workers": 8,
     }
 
@@ -140,22 +140,20 @@ def train(args):
 
     # --- Dynamic Transform Selection ---
     train_transforms = get_pathology_transforms(args.pathology)
-    # The test set should always have minimal processing
-    test_transforms = get_pathology_transforms(args.pathology) # Use the simplest transform
+    val_transforms = get_pathology_transforms(args.pathology)
 
     # --- Data and Sampler Setup ---
-    train_dataset = SpecialistDataset(CONFIG["train_csv"], CONFIG["image_dir"], transform=train_transforms)
-    test_dataset = SpecialistDataset(CONFIG["test_csv"], CONFIG["image_dir"], transform=test_transforms)
+    train_dataset = SpecialistDataset(CONFIG["train_csv"], CONFIG["image_dir"], args.pathology, transform=train_transforms)
+    val_dataset = SpecialistDataset(CONFIG["val_csv"], CONFIG["image_dir"], args.pathology, transform=val_transforms)
     
-    # ## MODIFICATION: Removed WeightedRandomSampler and re-enabled shuffle=True ##
     train_loader = DataLoader(train_dataset, batch_size=CONFIG["batch_size"], shuffle=True, num_workers=CONFIG["num_workers"])
-    test_loader = DataLoader(test_dataset, batch_size=CONFIG["batch_size"], shuffle=False, num_workers=CONFIG["num_workers"])
+    val_loader = DataLoader(val_dataset, batch_size=CONFIG["batch_size"], shuffle=False, num_workers=CONFIG["num_workers"])
     
     model = get_specialist_model(args.architecture).to(device)
     
-    # --- Weighted Loss Calculation (as you specified) ---
+    # --- Weighted Loss Calculation ---
     df_train = pd.read_csv(CONFIG["train_csv"])
-    class_counts = df_train['label'].value_counts().to_dict()
+    class_counts = df_train[args.pathology].value_counts().to_dict()
     pos_count = class_counts.get(1, 0)
     neg_count = class_counts.get(0, 0)
     
@@ -173,9 +171,6 @@ def train(args):
     # --- Training Loop ---
     best_auc = 0.0
     for epoch in range(CONFIG["num_epochs"]):
-        # (The training and validation loops are identical to the Triage script)
-        # ...
-        # --- Training Phase ---
         print(f"\n--- Epoch {epoch+1}/{CONFIG['num_epochs']} ---")
         model.train()
         running_loss = 0.0
@@ -194,7 +189,7 @@ def train(args):
         model.eval()
         all_labels, all_preds = [], []
         with torch.no_grad():
-            for inputs, labels in tqdm(test_loader, desc=f"Validating Epoch {epoch+1}"):
+            for inputs, labels in tqdm(val_loader, desc=f"Validating Epoch {epoch+1}"):
                 inputs, labels = inputs.to(device), labels.to(device)
                 outputs = model(inputs)
                 preds = torch.sigmoid(outputs)
@@ -215,7 +210,7 @@ def train(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train a specialist model for a specific pathology.")
-    parser.add_argument("--pathology", type=str, required=True, help="Name of the pathology (e.g., 'pneumonia').")
+    parser.add_argument("--pathology", type=str, required=True, help="Name of the pathology (e.g., 'Pneumonia').", choices=["Pneumonia", "Effusion", "Cardiomegaly", "Infiltration", "Atelectasis"])
     parser.add_argument("--architecture", type=str, required=True, help="Model architecture (e.g., 'resnet50').")
     parser.add_argument("--base_dir", type=str, required=True, help="Path to the base scratch directory.")
     

@@ -74,17 +74,21 @@ if __name__ == "__main__":
     parser.add_argument("--base_dir", type=str, required=True, help="Path to the base scratch directory.")
     args = parser.parse_args()
 
-    PATHOLOGIES = ['atelectasis', 'cardiomegaly', 'effusion', 'infiltration', 'pneumonia']
+    PATHOLOGIES = ['Atelectasis', 'Cardiomegaly', 'Effusion', 'Infiltration', 'Pneumonia']
 
     # --- Define file paths ---
     consensus_train_path = os.path.join(args.base_dir, "consensus_train_set.csv")
     truth_train_path = os.path.join(args.base_dir, "triage_train_set.csv")
+    
+    consensus_val_path = os.path.join(args.base_dir, "consensus_val_set.csv")
+    truth_val_path = os.path.join(args.base_dir, "triage_val_set.csv")
     
     consensus_test_path = os.path.join(args.base_dir, "consensus_test_set.csv")
     truth_test_path = os.path.join(args.base_dir, "triage_test_set.csv")
 
     # --- Run the patching process ---
     patch_file(consensus_train_path, truth_train_path, PATHOLOGIES)
+    patch_file(consensus_val_path, truth_val_path, PATHOLOGIES)
     patch_file(consensus_test_path, truth_test_path, PATHOLOGIES)
 
     print("--- 🎉 All files have been patched successfully! ---")

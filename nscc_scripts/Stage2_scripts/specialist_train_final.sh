@@ -21,7 +21,7 @@ module load pytorch
 
 # 2. Define arrays for pathologies and architectures
 #    The order MUST match your final architectural plan
-pathologies=( 'atelectasis' 'cardiomegaly' 'effusion' 'infiltration' 'pneumonia' )
+pathologies=( 'Atelectasis' 'Cardiomegaly' 'Effusion' 'Infiltration' 'Pneumonia' )
 architectures=( 'resnet50' 'resnet50' 'resnet50' 'densenet121' 'densenet121' )
 
 # 3. Get the parameters for this specific job array task
